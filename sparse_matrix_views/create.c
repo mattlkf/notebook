@@ -52,6 +52,7 @@ SPA_Error SPA_Copy_buffer_to_object(int m, int n, SPA_Elem_t *buf, obj_t obj){
       buf_idx++;
     }
   }
+  mat->ia[m] = csr_idx; // the last element of iA is the # of nonzeros
 
   return SPA_Error_no_err;
 }
