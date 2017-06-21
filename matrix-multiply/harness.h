@@ -1,0 +1,1 @@
+void test(int n, int m, void (*fp)(int * a, int * b,  int * c));
