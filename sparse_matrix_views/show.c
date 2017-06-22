@@ -6,9 +6,6 @@ SPA_Error SPA_Obj_show(obj_t obj){
   if(obj.type == CSR_VIEW){
       // Todo: print the view of the sparse matrix
       view_t *view = obj.view;
-      printf("A view: rows %d to %d, cols %d to %d\n",
-              view->rs, view->re,
-              view->cs, view->ce);
   }
   else {
       int i, j;
