@@ -6,21 +6,25 @@
 // Types
 typedef int SPA_Error;
 typedef double SPA_Elem_t;
-
+typedef SPA_Elem_t scalar_t;
 // Error codes
 #define SPA_Error_err 1
 #define SPA_Error_no_err 0
+
+// The return value used in Spark
+#define SPA_SUCCESS 0
+
+// SPA Quadrants (used in API)
+#define SPA_TL    0
+#define SPA_TR    1
+#define SPA_BL    2
+#define SPA_BR    3
 
 // Object types
 #define CSR_VIEW  1
 #define CSR_OBJ   2
 #define COO_OBJ   3
-
-// Quadrants
-#define SPA_TL    0
-#define SPA_TR    1
-#define SPA_BL    2
-#define SPA_BR    3
+#define SCALAR    4
 
 // View 2x2 parts
 #define VIEW_2x2_TL    0
@@ -78,9 +82,11 @@ typedef struct obj_t_struct {
   int type;
   int subtype;
   union {
+    scalar_t *scalar;
     partition_t* part;
     csr_t *csr;
   };
 } obj_t;
 
-
+// Syntactic sugar
+typedef obj_t SPA_Obj;

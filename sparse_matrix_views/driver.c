@@ -1,8 +1,6 @@
 #include <stdio.h>
-#include "typedefs.h"
-#include "partitions.h"
-#include "create.h"
-#include "show.h"
+#include "SPA.h"
+#include "triangle_count.h"
 
 #define M 4
 #define N 4
@@ -16,6 +14,8 @@ double data[] = { 1.0, 1.0, 1.0, 1.0,
                   1.0, 2.0, 3.0, 3.0,
                   1.0, 3.0, 3.0, 4.0 };
 
+double zero[] = {77};
+
 // #define M 4
 // #define N 4
 // double data[] = { 0.0, 0.0, 0.0, 0.0, 
@@ -23,33 +23,25 @@ double data[] = { 1.0, 1.0, 1.0, 1.0,
 //                   0.0, 0.0, 0.0, 0.0,
 //                   0.0, 0.0, 0.0, 0.0 };
                   
-
-// #define COO_M 2
-// #define COO_N 2
-// #define COO_NZ 2
-// coo_elem_t coo_data[COO_NZ] = {
-//   {1.0, 0, 0},
-//   {2.0, 1, 2}
-// };
-
 int main(){                    
   // Create a matrix object
-  obj_t A;
+  obj_t A, b;
   SPA_Obj_create(M, N, &A);
+  SPA_Obj_create(1, 1, &b); // b is a scalar
 
   // Initialize its contents from buffer
   SPA_Copy_buffer_to_object(M, N, data, A);
+  SPA_Copy_buffer_to_object(1, 1, zero, b);
 
-  // obj_t A_COO;
-  // SPA_Obj_create(M, N, &A_COO);
-  // SPA_Copy_coo_buffer_to_object(COO_M, COO_N, COO_NZ, coo_data, A_COO);
-  // // Initialize its contents from a COO object
-  
-  // Show it
+  // Show objects
   SPA_Obj_show(A);
+  SPA_Obj_show(b);
+
+  // triangle_count_unb_var1(A, b);
 
   // Free it
   SPA_Obj_free(&A);
+  SPA_Obj_free(&b);
 
   return 0;
 }
