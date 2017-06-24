@@ -14,7 +14,7 @@ double data[] = { 1.0, 1.0, 1.0, 1.0,
                   1.0, 2.0, 3.0, 3.0,
                   1.0, 3.0, 3.0, 4.0 };
 
-double zero[] = {77};
+double zero[] = {0};
 
 // #define M 4
 // #define N 4
@@ -37,7 +37,7 @@ int main(){
   SPA_Obj_show(A);
   SPA_Obj_show(b);
 
-  // triangle_count_unb_var1(A, b);
+  triangle_count_unb_var1(A, b);
 
   // Free it
   SPA_Obj_free(&A);

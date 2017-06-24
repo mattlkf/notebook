@@ -1,12 +1,15 @@
 #include "partitions.h"
 #include <assert.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 int SPA_Obj_length(obj_t A){
   if(A.type == CSR_VIEW){
     #ifdef SAFE
     assert(A.part != NULL);
     #endif
+
+    printf("Is a view!\n");
 
     switch(A.subtype){
       case VIEW_2x2_TR:
@@ -95,10 +98,10 @@ SPA_Error SPA_Part_2x2(obj_t A, obj_t* ATL, obj_t* ATR,
   }
 
   // Set the views to point to this partition
-  ATL->type = VIEW_2x2_TL;
-  ATR->type = VIEW_2x2_TR;
-  ABL->type = VIEW_2x2_BL;
-  ABR->type = VIEW_2x2_BR;
+  ATL->subtype = VIEW_2x2_TL;
+  ATR->subtype = VIEW_2x2_TR;
+  ABL->subtype = VIEW_2x2_BL;
+  ABR->subtype = VIEW_2x2_BR;
 
   ATL->part = ATR->part = ABL->part = ABR->part = part;
 
