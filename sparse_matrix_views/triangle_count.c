@@ -10,7 +10,7 @@ int triangle_count_unb_var1( SPA_Obj A, SPA_Obj beta )
 
   int err = SPA_Part_2x2( A,    &ATL, &ATR,
                       &ABL, &ABR,     0, 0, SPA_TL );
-  assert(err != SPA_Error_no_err);
+  assert(err == SPA_Error_no_err);
 
   printf("Made a partition\n");
 

@@ -1,5 +1,6 @@
 #include "create.h"
 #include <stdlib.h>
+#include <stdio.h>
 
 SPA_Error SPA_Obj_create(int m, int n, obj_t *obj){
   if(m == 1 && n ==1){
@@ -27,6 +28,7 @@ SPA_Error SPA_Copy_buffer_to_object(int m, int n, SPA_Elem_t *buf, obj_t obj){
   int i, j;
 
   if (obj.type == SCALAR){
+    printf("Creating a SCALAR\n");
     // If assigning to a scalar, buffer must be one element only
     if(m != 1 || n != 1){
       return SPA_Error_err;
@@ -34,11 +36,14 @@ SPA_Error SPA_Copy_buffer_to_object(int m, int n, SPA_Elem_t *buf, obj_t obj){
     *obj.scalar = buf[0];
   }
   else if(obj.type == CSR_OBJ){
+    printf("Creating a CSR_OBJ\n");
     csr_t *mat = obj.csr;
 
     // dimensions of raw buffer must match csr matrix dimensions
-    if(m != mat->m || n != mat->n) return SPA_Error_err;
-
+    if(m != mat->m || n != mat->n){
+      printf("Buffer does not match dimensions\n");
+      return SPA_Error_err;
+    }
     // Count the number of nonzero elements in the dense matrix
     int nz_count = 0;
     for(i=0;i<m*n;i++){

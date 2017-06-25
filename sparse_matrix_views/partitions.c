@@ -35,21 +35,30 @@ int SPA_Obj_length(obj_t A){
 SPA_Error SPA_Part_2x2(obj_t A, obj_t* ATL, obj_t* ATR,
                                 obj_t* ABL, obj_t* ABR, int mb, int nb, int quadrant){
 
+  printf("Inside %s\n", __FUNCTION__);
 #ifdef SAFE
+  printf("Checking safety\n");
   // Confirm that A is an object
   if(A.type != CSR_OBJ){
+    printf("Not an object\n");
     return SPA_Error_err;
   }
   // Confirm that ATL, ATR, ABR and ABL are views
-  if(ATL->type != CSR_VIEW || ATR->type != CSR_VIEW || ABL->type != CSR_VIEW || ABR->type != CSR_VIEW){
-    return SPA_Error_err;
-  }
+  // if(ATL->type != CSR_VIEW || ATR->type != CSR_VIEW || ABL->type != CSR_VIEW || ABR->type != CSR_VIEW){
+  //   printf("Quadrants are not views\n");
+  //   return SPA_Error_err;
+  // }
 
   // Confirm that the views are not tied to a partition yet
-  if(ATL->part == NULL || ATR->part == NULL || ABL->part == NULL || ABR->part == NULL){
-    return SPA_Error_err;
-  }
+  // if(ATL->part != NULL || ATR->part != NULL || ABL->part != NULL || ABR->part != NULL){
+  //   return SPA_Error_err;
+  // }
+
+  printf("Checked safety\n");
 #endif
+
+  // Make ATL, ATR, ABR and ABL views
+  ATL->type = ATR->type = ABL->type = ABR->type = CSR_VIEW;
 
   // Based on the quadrant indicated, determine which row and which column we want
   const int m = A.csr->m;
