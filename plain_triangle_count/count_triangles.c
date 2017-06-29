@@ -149,6 +149,11 @@ void print_csr(csr_t *csr){
     for(i=0;i<csr->ia[n];i++) printf("%d ", csr->ja[i]);
     printf("\n");
 
+    printf("id: ");
+    for(i=0;i<csr->ia[n];i++) printf("%d ", i);
+    printf("\n");
+
+
     // Print the contents in full matrix form
     int csr_idx = 0;
     printf("Uncompressed form:\n");
@@ -204,18 +209,18 @@ int count_triangles(csr_t *csr){
 
         while(pa < csr->ia[j+1] && pb < csr->ia[i+1]){
           if(csr->ja[pa] == csr->ja[pb]){
+            printf("Found a triangle! %d %d %d\n", i, j, csr->ja[pa]);
             sum++;
             pa++;
             pb++;
           }
           else {
-            if(csr->ia[pa] < csr->ia[pb]) pa++;
+            if(csr->ja[pa] < csr->ja[pb]) pa++;
             else pb++;
           }
         }
       }
     }
-
   }
 
   free(idx);
