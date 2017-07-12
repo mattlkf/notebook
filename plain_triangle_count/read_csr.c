@@ -5,10 +5,10 @@
 using namespace std;
 
 typedef struct{
-	int m, n;
-	int *data;
-	int *ia;
-	int *ja;
+  int m, n;
+  int *data;
+  int *ia;
+  int *ja;
 } csr_t;
 
 struct edge{
@@ -21,18 +21,18 @@ bool cmp(const edge &a, const edge &b){
 }
 
 int get_int(FILE * f){
-	// Read characters until you hit a number
-	char ch;
-	while(1){
-		ch = getc(f);
-		if(ch >= '0' && ch <= '9') break;
-	}
-	int result = 0;
-	while(ch >= '0' && ch <= '9'){
-		result = result * 10 + ch - '0';
-		ch = getc(f);
-	}
-	return result;
+  // Read characters until you hit a number
+  char ch;
+  while(1){
+    ch = getc(f);
+    if(ch >= '0' && ch <= '9') break;
+  }
+  int result = 0;
+  while(ch >= '0' && ch <= '9'){
+    result = result * 10 + ch - '0';
+    ch = getc(f);
+  }
+  return result;
 }
 
 void check_graph(edge *a, int n){
@@ -59,6 +59,57 @@ void inspect_csr(csr_t csr){
   printf("There are %d empty rows (out of %d)\n", empty_row_count, csr.n);
 }
 
+
+int compress_indices(int *a, int n){
+  int i, j;
+  // Allocate a copy..
+  int *ordered = (int*) malloc(sizeof(int) * n);
+
+  // Copy it over..
+  for(i=0;i<n;i++) ordered[i] = a[i];
+
+  for(i=0;i<n;i++){
+    printf("%d ", a[i]);
+  }
+  printf("\n");
+
+  // Sort..
+  sort(ordered, ordered+n);
+
+  for(i=0;i<n;i++){
+    printf("%d ", ordered[i]);
+  }
+  printf("\n");
+
+  // Dedup..
+  int p = 0;
+  for(i=0;i<n;i=j){
+    for(j=i;j<n && ordered[i] == ordered[j];j++);
+    ordered[p++] = ordered[i];
+  }
+
+  int m = p;
+  // Print..
+  for(i=0;i<m;i++){
+    printf("%d ", ordered[i]);
+  }
+  printf("\n");
+
+  // Compress
+  for(i=0;i<n;i++){
+    a[i] = lower_bound(ordered, ordered+m, a[i]) - ordered;
+  }
+
+  for(i=0;i<n;i++){
+    printf("%d ", a[i]);
+  }
+  printf("\n");
+
+  // Return the new height/width of matrix
+  return m;
+}
+
+
 // Treat it as a list of edges
 void duplicate_graph(edge * a, int n){
   // Create a copy..
@@ -73,10 +124,11 @@ void duplicate_graph(edge * a, int n){
   sort(a, a+n, cmp);
 }
 
-void read_csr(FILE *f, csr_t * csr, int duplicate){
-	int n = get_int(f);
-	int m = get_int(f);
-	printf("%d unique nodes, %d edges\n", n, m);
+void read_csr(FILE *f, csr_t * csr, char dup, bool compress){
+  int duplicate = (int)(dup == 'd');
+  int n = get_int(f);
+  int m = get_int(f);
+  printf("%d unique nodes, %d edges\n", n, m);
 
   // Allocate enough space to hold the input data (it is not a CSR yet)
   int pii = 0;
@@ -92,6 +144,10 @@ void read_csr(FILE *f, csr_t * csr, int duplicate){
   printf("Read input file\n");
 
   check_graph((edge*) input_ints, m);
+
+  if(compress){
+    n = compress_indices(input_ints, m*2) - 1;
+  }
 
   if(duplicate){
     duplicate_graph((edge*)input_ints, m);
@@ -124,6 +180,7 @@ void read_csr(FILE *f, csr_t * csr, int duplicate){
   }
 
   while(pi <= csr->n){
+    printf("%d\n", i);
     csr->ia[++pi] = i;    
   }
 
@@ -142,7 +199,7 @@ void print_csr(csr_t *csr){
     printf("\n");
 
     printf("iA: ");
-    for(i=0;i<=m;i++) printf("%d ", csr->ia[i]);
+    for(i=0;i<=n;i++) printf("%d ", csr->ia[i]);
     printf("\n");
 
     printf("jA: ");
@@ -171,108 +228,38 @@ void print_csr(csr_t *csr){
 }
 
 void free_csr(csr_t csr){
-	if(csr.data != NULL) free(csr.data);
-	if(csr.ja != NULL) free(csr.ja);
-	if(csr.ia != NULL) free(csr.ia);
-}
-
-int count_triangles(csr_t *csr){
-  int sum = 0;
-  int i, j, k;
-  int n = csr->n;
-
-  // Allocate n indices, initially at the start of each row
-  int *idx = (int *) malloc(sizeof(int) * n);
-
-  for(int i=0;i<n;i++){
-    idx[i] = csr->ia[i];
-  }
-
-  // Stride through matrix
-  for(i=0;i<n;i++){
-    // Iterate through x (the vertical strip above current element)
-    for(j=0;j<i;j++){
-      // Find A[i][j]
-      while(idx[j] < csr->ia[j+1] && csr->ja[idx[j]] < i){
-        idx[j]++;
-      }
-
-      // If it's a one
-      if(idx[j] != csr->ia[j+1] && csr->ja[idx[j]] == i){
-        // Do the two-pointer trick on the rows
-        int pa = idx[j];
-        int pb = csr->ia[i];
-
-        while(pa < csr->ia[j+1] && pb < csr->ia[i+1]){
-          if(csr->ja[pa] == csr->ja[pb]){
-            // printf("Found a triangle! %d %d %d\n", i, j, csr->ja[pa]);
-            sum++;
-            pa++;
-            pb++;
-          }
-          else {
-            if(csr->ja[pa] < csr->ja[pb]) pa++;
-            else pb++;
-          }
-        }
-      }
-    }
-  }
-
-  free(idx);
-
-  return sum;
+  if(csr.data != NULL) free(csr.data);
+  if(csr.ja != NULL) free(csr.ja);
+  if(csr.ia != NULL) free(csr.ia);
 }
 
 int main(int argc, char **argv){
-	// Parse cmd-line arguments
-	if(argc != 2){
-		printf("Usage: %s <file>\n", argv[0]);
-		return 1;
-	}
+  // Parse cmd-line arguments
+  if(argc < 2){
+    printf("Usage: %s <file> <duplicate?>\n", argv[0]);
+    return 1;
+  }
 
-	FILE * f = fopen(argv[1], "r");
-	if(f == NULL){
-		printf("Error opening file\n");
-		return 1;
-	}
+  FILE * f = fopen(argv[1], "r");
+  if(f == NULL){
+    printf("Error opening file\n");
+    return 1;
+  }
 
-	// Convert the input file into a sparse matrix
-	csr_t csr;
+  // Convert the input file into a sparse matrix
+  csr_t csr;
 
-	read_csr(f, &csr, 0);
+  read_csr(f, &csr, argc == 3 ? argv[2][0] : ' ', true);
 
   inspect_csr(csr);
 
-	printf("Done reading\n");
-	fflush(stdout);
+  printf("Done reading\n");
+  // fflush(stdout);
 
-	// print_csr(&csr);
+  print_csr(&csr);
 
-  printf("%d triangles\n", count_triangles(&csr));
+  free_csr(csr);
 
-	// free_csr(csr);
-
-	fclose(f);
-	return 0;
+  fclose(f);
+  return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
