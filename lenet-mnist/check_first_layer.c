@@ -16,6 +16,19 @@ float ref_ca_2[2][14][14];
 float ref_pool_2[2][7][7];
 float bias_2[2];
 
+float flattened[98];
+
+float dense_weights_1[98][10];
+float dense_bias_1[10];
+float dense_out_1[10];
+float ref_dense_1[10];
+
+float dense_weights_2[10][10];
+float dense_bias_2[10];
+float dense_out_2[10];
+float ref_dense_2[10];
+
+
 #define EPSILON 0.01
 
 int main(){
@@ -78,6 +91,7 @@ int main(){
     }
   }
 
+  // Read pool 2 output
   for(k=0;k<2;k++){
     for(i=0;i<7;i++){
       for(j=0;j<7;j++){
@@ -85,6 +99,48 @@ int main(){
       }
     }
   }
+
+  // Read flattened output
+  for(i=0;i<98;i++) scanf("%f", &flattened[i]);
+
+// Dense Layer 1
+
+  // Read dense weights
+  for(i=0;i<98;i++){
+    for(j=0;j<10;j++){
+      scanf("%f", &dense_weights_1[i][j]);
+    }
+  }
+
+  // Read dense layer biases
+  for(i=0;i<10;i++){
+    scanf("%f", &dense_bias_1[i]);
+  }
+
+  // Read dense layer output (first dense)
+  for(i=0;i<10;i++){
+    scanf("%f", &ref_dense_1[i]);
+  }
+
+// Dense Layer 2
+
+  // Read dense weights
+  for(i=0;i<10;i++){
+    for(j=0;j<10;j++){
+      scanf("%f", &dense_weights_2[i][j]);
+    }
+  }
+
+  // Read dense layer biases
+  for(i=0;i<10;i++){
+    scanf("%f", &dense_bias_2[i]);
+  }
+
+  // Read dense layer output (first dense)
+  for(i=0;i<10;i++){
+    scanf("%f", &ref_dense_2[i]);
+  }
+
 
   // First conv-activate layer
   for(k=0;k<2;k++){
@@ -174,6 +230,35 @@ int main(){
     }
   }
 
+  // Flatten
+  int p = 0;
+  for(i=0;i<2;i++){
+    for(j=0;j<7;j++){
+      for(k=0;k<7;k++){
+        flattened[p++] = pool_out_2[i][j][k];
+      }
+    }
+  }
+
+
+  // Compute first dense layer output (with ReLU)
+  for(i=0;i<10;i++){
+    float mac = dense_bias_1[i];
+    for(j=0;j<98;j++){
+      mac += flattened[j] * dense_weights_1[j][i];
+    }
+    dense_out_1[i] = mac > 0 ? mac : 0;
+  }
+
+  // Compute second dense layer output (without activation)
+  for(i=0;i<10;i++){
+    float mac = dense_bias_2[i];
+    for(j=0;j<10;j++){
+      mac += dense_out_1[j] * dense_weights_2[j][i];
+    }
+    // dense_out_2[i] = mac > 0 ? mac : 0;
+    dense_out_2[i] = mac;
+  }
 
   // Compare (with tolerance)
   for(k=0;k<2;k++){
@@ -232,6 +317,34 @@ int main(){
   }
   printf("Pool 2 ok\n");
 
+  // Check the first dense layer output
+  for(i=0;i<10;i++){
+    if(ref_dense_1[i] < dense_out_1[i] - EPSILON
+     ||ref_dense_1[i] > dense_out_1[i] + EPSILON){
+      printf("Dense 1!\n");
+      printf("%f %f\n", ref_dense_1[i], dense_out_1[i]);
+    }
+  }
+
+  printf("Dense 1 ok\n");
+
+  // Check the second dense layer output
+  for(i=0;i<10;i++){
+    if(ref_dense_2[i] < dense_out_2[i] - EPSILON
+     ||ref_dense_2[i] > dense_out_2[i] + EPSILON){
+      printf("Dense 2!\n");
+      printf("%f %f\n", ref_dense_2[i], dense_out_2[i]);
+    }
+  }
+
+  printf("Dense 2 ok\n");
+
+  int argmax = 0;
+  for(i=0;i<10;i++){
+    if(dense_out_2[i] > dense_out_2[argmax]) argmax = i;
+  }
+
+  printf("Prediction: %d\n", argmax);
 
   // Print
   // for(k=0;k<2;k++){

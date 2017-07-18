@@ -53,16 +53,16 @@ model.compile(loss="categorical_crossentropy", optimizer=opt,
 model.summary()
 
 # print("[INFO] training...")
-# model.fit(trainData, trainLabels, batch_size=128, epochs=1,
-#   verbose=1)
+model.fit(trainData, trainLabels, batch_size=128, epochs=args['e'],
+  verbose=1)
 
 
 # show the accuracy on the testing set
 
-# print("[INFO] evaluating...")
-# (loss, accuracy) = model.evaluate(testData, testLabels,
-#   batch_size=128, verbose=1)
-# print("[INFO] accuracy: {:.2f}%".format(accuracy * 100))
+print("[INFO] evaluating...")
+(loss, accuracy) = model.evaluate(testData, testLabels,
+  batch_size=128, verbose=1)
+print("[INFO] accuracy: {:.2f}%".format(accuracy * 100))
 
 
 # Create a file to write the images to
@@ -139,6 +139,67 @@ np.savetxt(f, layer5_output[0][1], fmt="%.3f")
 
 print layer5_output.shape
 
+get_6th_layer_output = K.function([model.layers[0].input],
+                                  [model.layers[6].output])
+
+layer6_output = get_6th_layer_output([testData[np.newaxis, 0]])[0]
+
+np.savetxt(f, layer6_output[0], fmt="%.3f")
+
+print layer6_output.shape
+
+# The first dense layer
+print >>f, all_weights[4]
+print >>f, all_weights[5]
+
+# Print output after activation
+get_8th_layer_output = K.function([model.layers[0].input],
+                                  [model.layers[8].output])
+
+layer8_output = get_8th_layer_output([testData[np.newaxis, 0]])[0]
+
+np.savetxt(f, layer8_output[0], fmt="%.3f")
+
+print layer8_output.shape
+
+# The second dense layer
+print >>f, all_weights[6]
+print >>f, all_weights[7]
+
+get_9th_layer_output = K.function([model.layers[0].input],
+                                  [model.layers[9].output])
+
+layer9_output = get_9th_layer_output([testData[np.newaxis, 0]])[0]
+
+np.savetxt(f, layer9_output[0], fmt="%.3f")
+
+# The post-softmax-activation dense 2 output
+
+print layer9_output.shape
+
+get_10th_layer_output = K.function([model.layers[0].input],
+                                  [model.layers[10].output])
+
+layer10_output = get_10th_layer_output([testData[np.newaxis, 0]])[0]
+
+print >>f, ""
+
+np.savetxt(f, layer10_output[0], fmt="%.3f")
+
+print layer10_output.shape
+
+print ""
+
+print testLabels_orig[0]
+
+# classify the digit
+probs = model.predict(testData[np.newaxis, 0])
+
+print "Probs: ", probs
+
+prediction = probs.argmax(axis=1)
+
+print prediction
 
 # print layer1_output[0][0]
 # print layer1_output[0][0].shape
