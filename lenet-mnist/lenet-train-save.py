@@ -79,7 +79,7 @@ print >>f, all_weights[1]
 
 # Print image(s)
 
-np.savetxt(f, testData[0][0], fmt="%.2f")
+np.savetxt(f, testData[0][0], fmt="%.3f")
 
 # For each image, print the image data and the output of every layer
 
@@ -88,10 +88,56 @@ get_1st_layer_output = K.function([model.layers[0].input],
 
 layer1_output = get_1st_layer_output([testData[np.newaxis, 0]])[0]
 
-np.savetxt(f, layer1_output[0][0], fmt="%.2f")
-np.savetxt(f, layer1_output[0][1], fmt="%.2f")
+np.savetxt(f, layer1_output[0][0], fmt="%.3f")
+np.savetxt(f, layer1_output[0][1], fmt="%.3f")
 
 print layer1_output.shape
+
+get_2nd_layer_output = K.function([model.layers[0].input],
+                                  [model.layers[2].output])
+
+layer2_output = get_2nd_layer_output([testData[np.newaxis, 0]])[0]
+
+np.savetxt(f, layer2_output[0][0], fmt="%.3f")
+np.savetxt(f, layer2_output[0][1], fmt="%.3f")
+
+print layer2_output.shape
+
+
+# The second convolutional layer - this is a 3D thing
+print >>f, all_weights[2]
+print >>f, all_weights[3]
+
+# get_3rd_layer_output = K.function([model.layers[0].input],
+#                                   [model.layers[3].output])
+
+# layer3_output = get_3rd_layer_output([testData[np.newaxis, 0]])[0]
+
+# np.savetxt(f, layer3_output[0][0], fmt="%.3f")
+# np.savetxt(f, layer3_output[0][1], fmt="%.3f")
+
+# print layer3_output.shape
+
+
+get_4th_layer_output = K.function([model.layers[0].input],
+                                  [model.layers[4].output])
+
+layer4_output = get_4th_layer_output([testData[np.newaxis, 0]])[0]
+
+np.savetxt(f, layer4_output[0][0], fmt="%.3f")
+np.savetxt(f, layer4_output[0][1], fmt="%.3f")
+
+print layer4_output.shape
+
+get_5th_layer_output = K.function([model.layers[0].input],
+                                  [model.layers[5].output])
+
+layer5_output = get_5th_layer_output([testData[np.newaxis, 0]])[0]
+
+np.savetxt(f, layer5_output[0][0], fmt="%.3f")
+np.savetxt(f, layer5_output[0][1], fmt="%.3f")
+
+print layer5_output.shape
 
 
 # print layer1_output[0][0]
