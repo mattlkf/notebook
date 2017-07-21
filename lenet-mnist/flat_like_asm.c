@@ -6,24 +6,24 @@ using namespace std;
 
 struct kernel_t{
   int x, y, z;
-  float *val;
-  float bias;
+  int16_t *val;
+  int16_t bias;
 };
 
 struct layer_t{
   int x, y, z;
-  float *val;
+  int16_t *val;
 };
 
 struct dense_weights_t{
   int n_in; // the number of input nodes
   int n_out; // the number of output nodes
-  float *val;
-  float *bias;
+  int16_t *val;
+  int16_t *bias;
 };
 
 #define MAX_BUF_SIZE 1352
-float buf[2][MAX_BUF_SIZE];
+int16_t buf[2][MAX_BUF_SIZE];
 
 layer_t define_layer(int x, int y, int z){
   static int tog = 1;
@@ -31,49 +31,79 @@ layer_t define_layer(int x, int y, int z){
   return {x, y, z, buf[tog]};
 }
 
-float max_float_seen = 0;
-float min_float_seen = 0;
-float smallest_abs = 1.0;
-void record_max_val(float x){
-  if(x > max_float_seen) max_float_seen = x;
-  if(x < min_float_seen) min_float_seen = x;
+int16_t max_int16_t_seen = 0;
+int16_t min_int16_t_seen = 0;
+int16_t smallest_abs = 1.0;
+void record_max_val(int16_t x){
+  if(x > max_int16_t_seen) max_int16_t_seen = x;
+  if(x < min_int16_t_seen) min_int16_t_seen = x;
 
-  // float absx = x < 0 ? -x : x;
+  // int16_t absx = x < 0 ? -x : x;
   // if(absx != 0.0 && absx < smallest_abs) smallest_abs = absx; 
 }
+
+float q_to_f(int16_t x){
+  return (float)(x) / (float)(1 << 15);
+}
+
+int16_t f_to_q(float x){
+  if(x >= 0.999) x = 0.999;
+  return (int16_t)(x * (float)(1 << 15));
+}
+
+int16_t mul(int16_t x, int16_t y){
+  int32_t res = (int32_t) x * (int32_t) y;
+  return (int16_t)(res >> 15);
+}
+
 
 void read_kernels(kernel_t *k, int nk, int x, int y, int z){
   // Read kernel weights
   for(int i=0;i<nk;i++){
-    k[i].val = (float*) malloc(sizeof(float) * x * y * z);
+    k[i].val = (int16_t*) malloc(sizeof(int16_t) * x * y * z);
     k[i].x = x;
     k[i].y = y;
     k[i].z = z;
     for(int j=0;j<x*y*z;j++){
-      scanf("%f", &k[i].val[j]);
-      record_max_val(k[i].val[i]);
+      float f;
+      scanf("%f", &f);
+      k[i].val[j] = f_to_q(f);
+
+      // scanf("%d", &k[i].val[j]);
+      record_max_val(k[i].val[j]);
     }
   }
 
   // Read biases
   for(int i=0;i<nk;i++){
-    scanf("%f", &k[i].bias);
+    float f;
+    scanf("%f", &f);
+    k[i].bias = f_to_q(f);    
+
+    // scanf("%d", &k[i].bias);
     record_max_val(k[i].bias);
   }
 }
 
 void read_dense(dense_weights_t *d, int x, int y){
-  d->val = (float *) malloc(sizeof(float) * x * y);
-  d->bias = (float *) malloc(sizeof(float) * y);
+  d->val = (int16_t *) malloc(sizeof(int16_t) * x * y);
+  d->bias = (int16_t *) malloc(sizeof(int16_t) * y);
   d->n_in = x;
   d->n_out = y;
   for(int i=0;i<x*y;i++){
-    scanf("%f", &d->val[i]);
+    float f;
+    scanf("%f", &f);
+    d->val[i] = f_to_q(f);
+    // scanf("%d", &d->val[i]);
     record_max_val(d->val[i]);
   }
   // A bias for each output
   for(int i=0;i<y;i++){
-    scanf("%f", &d->bias[i]);
+    float f;
+    scanf("%f", &f);
+    d->bias[i] = f_to_q(f);
+
+    //scanf("%d", &d->bias[i]);
     record_max_val(d->bias[i]);
   }
 }
@@ -136,8 +166,8 @@ void convolve(layer_t *in, kernel_t *kernels, layer_t *out){
   // k_ptr
   // in_ptr
 
-  float reg[8];
-  float *out_ptr = out->val;
+  int16_t reg[8];
+  int16_t *out_ptr = out->val;
 
   for(;s[0]>0;s[0]--){
 
@@ -147,8 +177,8 @@ void convolve(layer_t *in, kernel_t *kernels, layer_t *out){
     s[18] = kernel->bias;
     // s[19] = kernel->val;
 
-    // float *in_ptr = s[20];
-    float *in_ptr = in->val;
+    // int16_t *in_ptr = s[20];
+    int16_t *in_ptr = in->val;
 
     // For each element of output..
     for(s[4]=s[3];s[4]>0;s[4]--){      
@@ -158,19 +188,20 @@ void convolve(layer_t *in, kernel_t *kernels, layer_t *out){
         for(int ri=0;ri<8;ri++) reg[ri] = s[18]; // the kernel bias
 
         // Reset k_ptr to start of kernel
-        float *k_ptr = kernel->val; // should be s[19]
+        int16_t *k_ptr = kernel->val; // should be s[19]
 
         // Apply the kernel to 8 consecutive input elements
         for(s[9]=s[15];s[9]>0;s[9]--){ // For each layer
           for(int i=s[16];i>0;i--){
             for(int j=s[17];j>0;j--){
 
-              float elem_k = *(k_ptr++); // mov into MPY_1
+              int16_t elem_k = *(k_ptr++); // mov into MPY_1
 
               for(int ri=0;ri<8;ri++){
-                float elem_in = *(in_ptr++); // mov into MPY_2
+                int16_t elem_in = *(in_ptr++); // mov into MPY_2
                 
-                reg[ri] += elem_in * elem_k; // add result to a reg
+                // reg[ri] += elem_in * elem_k; // add result to a reg
+                reg[ri] += mul(elem_in, elem_k); // add result to a reg
                 record_max_val(reg[ri]);
               }
               in_ptr -= 7;
@@ -182,7 +213,7 @@ void convolve(layer_t *in, kernel_t *kernels, layer_t *out){
         }
 
         // Load out_ptr and restore it..
-        // float *out_ptr = s[21];
+        // int16_t *out_ptr = s[21];
         for(int ri=0;ri<8;ri++){
           *(out_ptr++) = reg[ri];
         }
@@ -199,18 +230,19 @@ void convolve(layer_t *in, kernel_t *kernels, layer_t *out){
         reg[0] = kernel->bias; 
 
         // Reset k_ptr to start of kernel
-        float *k_ptr = kernel->val;
+        int16_t *k_ptr = kernel->val;
 
         // Apply the kernel to 8 consecutive input elements
         for(s[9]=s[15];s[9]>0;s[9]--){ // For each layer
           for(int i=s[16];i>0;i--){
             for(int j=s[17];j>0;j--){
 
-              float elem_k = *(k_ptr++);
+              int16_t elem_k = *(k_ptr++);
 
-              float elem_in = *(in_ptr++);
+              int16_t elem_in = *(in_ptr++);
               
-              reg[0] += elem_in * elem_k;
+              // reg[0] += elem_in * elem_k;
+              reg[0] += mul(elem_in, elem_k);
               record_max_val(reg[0]);
             }
             in_ptr += s[5];
@@ -218,7 +250,7 @@ void convolve(layer_t *in, kernel_t *kernels, layer_t *out){
           in_ptr += s[10];
         }
 
-        // float *out_ptr = s[21];
+        // int16_t *out_ptr = s[21];
         *(out_ptr++) = reg[0];
         // s[21] = out_ptr;
 
@@ -247,7 +279,7 @@ void pool_2x2(layer_t *in, layer_t *out){
   for(int k=0;k<out->z;k++){
     for(int i=0;i<out->x;i++){
       for(int j=0;j<out->y;j++){
-        float max = 0;
+        int16_t max = 0;
 
         if(in->val[k * in_xy + i*2*in->y + j*2] > max){
           max = in->val[k * in_xy + i*2*in->y + j*2];
@@ -273,9 +305,10 @@ void dense(layer_t *in, dense_weights_t *d, layer_t *out){
   assert(d->n_in == in->x * in->y * in->z);
   // Loop over output values
   for(int i=0;i<d->n_out;i++){
-    float mac = d->bias[i];
+    int16_t mac = d->bias[i];
     for(int j=0;j<d->n_in;j++){
-      mac += d->val[i * d->n_in + j] * in->val[j];
+      // mac += d->val[i * d->n_in + j] * in->val[j];
+      mac += mul(d->val[i * d->n_in + j], in->val[j]);
       record_max_val(mac);
     }
     out->val[i] = mac;
@@ -293,7 +326,11 @@ int16_t argmax(layer_t *in){
 void read_layer(layer_t *in){
   int len = in->x * in->y * in->z;
   for(int i=0;i<len;i++){
-    scanf("%f", &in->val[i]);
+    float f;
+    scanf("%f", &f);
+    in->val[i] = f_to_q(f);
+
+    // scanf("%d", &in->val[i]);
     // record_max_val(in->val[i]);
   }  
 }
@@ -304,7 +341,7 @@ void print_layer(layer_t *in){
   for(int k=0;k<in->z;k++){
     for(int i=0;i<in->x;i++){
       for(int j=0;j<in->y;j++){
-        printf("%.3f ", in->val[p++]);
+        printf("%d ", in->val[p++]);
       }
       printf("\n");
     }
@@ -314,14 +351,14 @@ void print_layer(layer_t *in){
 
 void print_layer_sorted(layer_t *in){
   int len = in->x * in->y * in->z;
-  float *sorted = (float*) malloc(sizeof(float) * len);
+  int16_t *sorted = (int16_t*) malloc(sizeof(int16_t) * len);
   for(int i=0;i<len;i++){
     sorted[i] = in->val[i];
   }
 
   sort(sorted, sorted+len);
   for(int i=0;i<len;i++){
-    printf("%.2f ", sorted[i]);
+    printf("%hd ", sorted[i]);
   }
   printf("\n");
 
@@ -394,9 +431,9 @@ int main(){
 
   printf("Same as keras: %d\n", n_same_as_keras);
 
-  printf("Max float seen: %f\n", max_float_seen);
-  printf("Min float seen: %f\n", min_float_seen);
-  // printf("Closest to 0: %f\n", smallest_abs);
+  printf("Max int16_t seen: %d\n", max_int16_t_seen);
+  printf("Min int16_t seen: %d\n", min_int16_t_seen);
+  // printf("Closest to 0: %d\n", smallest_abs);
 
   free_kernel(conv_1);
   free_kernel(conv_2);
