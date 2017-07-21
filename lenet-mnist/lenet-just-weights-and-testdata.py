@@ -17,8 +17,9 @@ model_class = LeNet_valid
 ap = argparse.ArgumentParser()
 ap.add_argument("file", type=str, help="where to save weights + data")
 ap.add_argument("-n", type=int, default=1, help="(optional) how many images to save")
-ap.add_argument("-e", type=int, default=0, help="(optional) how many epochs to train for")
+ap.add_argument("-e", type=int, default=1, help="(optional) how many epochs to train for")
 ap.add_argument("-s", type=float, default=1.0, help="(optional) how much to downscale bias + images by")
+ap.add_argument("-l", type=int, default=0, help="(optional) load weights from file?")
 args = vars(ap.parse_args())
 
 print("[INFO] downloading MNIST...")
@@ -29,6 +30,9 @@ dataset = datasets.fetch_mldata("MNIST Original")
 # and construct the training and testing splits
 data = dataset.data.reshape((dataset.data.shape[0], 28, 28))
 data = data[:, np.newaxis, :, :]
+
+# np.random.seed(15213);
+np.random.seed(12345);
 (trainData, testData, trainLabels, testLabels_orig) = train_test_split(
   data / 255.0, dataset.target.astype("int"), test_size=0.33)
 
@@ -44,8 +48,10 @@ testLabels = np_utils.to_categorical(testLabels_orig, 10)
 # initialize the optimizer and model
 print("[INFO] compiling model...")
 opt = SGD(lr=0.01)
-# model = model_class.build(width=28, height=28, depth=1, classes=10, weightsPath="small5_2.hdf5")
-model = model_class.build(width=28, height=28, depth=1, classes=10)
+
+# If we aren't loading weights..
+model = model_class.build(width=28, height=28, depth=1, classes=10,
+  weightsPath="lenet-valid.hdf5" if args['l'] > 0 else None)
 
 model.compile(loss="categorical_crossentropy", optimizer=opt,
   metrics=["accuracy"])
@@ -53,16 +59,18 @@ model.compile(loss="categorical_crossentropy", optimizer=opt,
 # Print out the model
 model.summary()
 
-# print("[INFO] training...")
-model.fit(trainData, trainLabels, batch_size=128, epochs=args['e'], verbose=1)
+if args['l'] == 0:
+  print("[INFO] training...")
+  model.fit(trainData, trainLabels, batch_size=128, epochs=args['e'], verbose=1)
 
-# show the accuracy on the testing set
-
-if args['e'] > 0:
   print("[INFO] evaluating...")
   (loss, accuracy) = model.evaluate(testData, testLabels,
     batch_size=128, verbose=1)
   print("[INFO] accuracy: {:.2f}%".format(accuracy * 100))
+
+  print("[INFO] dumping weights to file...")
+  model.save_weights("lenet-valid.hdf5", overwrite=True)
+
 
 # Create a file to write to
 f = open(args['file'], 'w')
@@ -74,32 +82,42 @@ all_weights = model.get_weights()
 
 for i, w in enumerate(all_weights):
   print w.shape
+
+  # Special case: for the first conv layer weights
+  if i == 0:
+    w = w / args['s']
+
   # If this is a bias vector, scale it down
   if i % 2 == 1:
     w = w / args['s']
+  # Otherwise reshape the conv kernel weights
   elif i < 5:
     w = np.moveaxis(w, [2,3], [1,0])
     w = np.flip(w,3)
     w = np.flip(w,2)
+  # And the dense weights
   else:
     w = np.transpose(w)
+
   print >>f, w
 
 print >>f, args['n']
 
 # Print image(s) by randomly selecting a few digits
-for i in np.random.choice(np.arange(0, len(testLabels)), size=(args['n'],)):
+# for i in np.random.choice(np.arange(0, len(testLabels)), size=(args['n'],)):
+for i in xrange(args['n']):
   # classify the digit
   probs = model.predict(testData[np.newaxis, i])
   prediction = probs.argmax(axis=1)
 
   # save the image data
-  np.savetxt(f, testData[i][0] / args['s'], fmt="%.6f")
+  np.savetxt(f, testData[i][0])
+  # np.savetxt(f, testData[i][0] / args['s'], fmt="%.6f")
   print >>f, prediction, testLabels_orig[i]
 
   # show the image and prediction
-  print("[INFO] Predicted: {}, Actual: {}".format(prediction[0],
-    np.argmax(testLabels[i])))
+  # print("[INFO] Predicted: {}, Actual: {}".format(prediction[0],
+    # np.argmax(testLabels[i])))
 
   # get_layer_output = K.function([model.layers[0].input],
   #                               [model.layers[11].output])

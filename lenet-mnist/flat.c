@@ -31,6 +31,17 @@ layer_t define_layer(int x, int y, int z){
   return {x, y, z, buf[tog]};
 }
 
+float max_float_seen = 0;
+float min_float_seen = 0;
+float smallest_abs = 1.0;
+void record_max_val(float x){
+  if(x > max_float_seen) max_float_seen = x;
+  if(x < min_float_seen) min_float_seen = x;
+
+  // float absx = x < 0 ? -x : x;
+  // if(absx != 0.0 && absx < smallest_abs) smallest_abs = absx; 
+}
+
 void read_kernels(kernel_t *k, int nk, int x, int y, int z){
   // Read kernel weights
   for(int i=0;i<nk;i++){
@@ -40,12 +51,14 @@ void read_kernels(kernel_t *k, int nk, int x, int y, int z){
     k[i].z = z;
     for(int j=0;j<x*y*z;j++){
       scanf("%f", &k[i].val[j]);
+      record_max_val(k[i].val[i]);
     }
   }
 
   // Read biases
   for(int i=0;i<nk;i++){
     scanf("%f", &k[i].bias);
+    record_max_val(k[i].bias);
   }
 }
 
@@ -56,10 +69,12 @@ void read_dense(dense_weights_t *d, int x, int y){
   d->n_out = y;
   for(int i=0;i<x*y;i++){
     scanf("%f", &d->val[i]);
+    record_max_val(d->val[i]);
   }
   // A bias for each output
   for(int i=0;i<y;i++){
     scanf("%f", &d->bias[i]);
+    record_max_val(d->bias[i]);
   }
 }
 
@@ -124,6 +139,8 @@ void convolve(layer_t *in, kernel_t *kernels, layer_t *out){
               float elem_k = kernel->val[k * k_xy + i * k_y + j];
 
               elem_out += elem_in * elem_k;
+              
+              record_max_val(elem_out);
             }
           }
         }
@@ -178,6 +195,7 @@ void dense(layer_t *in, dense_weights_t *d, layer_t *out){
     float mac = d->bias[i];
     for(int j=0;j<d->n_in;j++){
       mac += d->val[i * d->n_in + j] * in->val[j];
+      record_max_val(mac);
     }
     out->val[i] = mac;
   }
@@ -195,6 +213,7 @@ void read_layer(layer_t *in){
   int len = in->x * in->y * in->z;
   for(int i=0;i<len;i++){
     scanf("%f", &in->val[i]);
+    // record_max_val(in->val[i]);
   }  
 }
 
@@ -256,6 +275,8 @@ int main(){
   read_dense(&dense_1, 32, 10);
   read_dense(&dense_2, 10, 10);
 
+
+  int n_same_as_keras = 0;
   int n_imgs;
   scanf("%d", &n_imgs);  
   printf("%d images\n", n_imgs);
@@ -268,35 +289,30 @@ int main(){
     relu(&layer_1);
     convolve(&layer_1, conv_2, &layer_2); 
     relu(&layer_2);
-    // print_layer(&layer_2);
     pool_2x2(&layer_2, &layer_3);
-
-    // print_layer(&layer_3);   
-
     convolve(&layer_3, conv_3, &layer_4);
-
-    // print_layer(&layer_4);   
-
     relu(&layer_4);
-
-    // print_layer(&layer_4);   
-
     pool_2x2(&layer_4, &layer_5);
-
-    // print_layer(&layer_5);   
-
     dense(&layer_5, &dense_1, &layer_6);
     relu(&layer_6);
     dense(&layer_6, &dense_2, &layer_7);
-    // print_layer(&layer_7);   
- 
     // Take the argmax of the last layer
-    printf("Prediction: %d\n", argmax(&layer_7));
+    int prediction = argmax(&layer_7);
+    // printf("Prediction: %d\n", prediction);
  
     int ref_prediction, ref_actual;
     scanf("%d %d", &ref_prediction, &ref_actual);
-    printf("Keras predicted %d (actually %d)\n", ref_prediction, ref_actual);
+    // printf("Keras predicted %d (actually %d)\n", ref_prediction, ref_actual);
+    if(ref_prediction == prediction){
+      n_same_as_keras++;
+    }
   }
+
+  printf("Same as keras: %d\n", n_same_as_keras);
+
+  printf("Max float seen: %f\n", max_float_seen);
+  printf("Min float seen: %f\n", min_float_seen);
+  // printf("Closest to 0: %f\n", smallest_abs);
 
   free_kernel(conv_1);
   free_kernel(conv_2);
